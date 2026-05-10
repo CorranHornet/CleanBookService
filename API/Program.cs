@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using static System.Runtime.InteropServices.JavaScript.JSType;
-//test
+//test 2
 namespace BookService
 {
     public partial class Program { }
