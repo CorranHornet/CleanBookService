@@ -1,0 +1,57 @@
+name: Project-Audit-2026
+on:
+  workflow_dispatch:
+    inputs:
+      target_branch:
+        description: 'Branch to audit'
+        required: true
+        default: 'main'
+  workflow_call:
+    inputs:
+      target_branch:
+        type: string
+        required: false
+        default: 'main'
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Specific Branch
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}
+          # This tells GitHub to grab the branch you chose
+          ref: ${{ inputs.target_branch || github.ref }}
+          fetch-depth: 0 
+
+      - name: Generate Audit File
+        run: |
+          OUTPUT="full-audit-log.txt"
+          
+          echo "==================================================" > $OUTPUT
+          echo "AUDIT FOR BRANCH: ${{ inputs.target_branch || github.ref_name }}" >> $OUTPUT
+          echo "REPO: ${{ github.repository }}" >> $OUTPUT
+          echo "==================================================" >> $OUTPUT
+          
+          echo -e "\n--- COMMIT HISTORY (${{ inputs.target_branch || github.ref_name }}) ---\n" >> $OUTPUT
+          git log --pretty=format:"Commit: %h | Date: %ad | Author: %an | Summary: %s" --date=short >> $OUTPUT
+          
+          echo -e "\n\n--- SOURCE CODE CONTENTS ---\n" >> $OUTPUT
+
+          find . -type f \( -name "*.js" -o -name "*.jsx" -o -name "*.ts" -o -name "*.tsx" -o -name "*.css" -o -name "*.cs" \) \
+          ! -path "*/node_modules/*" \
+          ! -path "*/dist/*" \
+          ! -path "*/build/*" \
+          ! -path "*/.git/*" | while read -r file; do
+            echo "FILE_START: $file" >> $OUTPUT
+            echo "--------------------------------------------------" >> $OUTPUT
+            cat "$file" >> $OUTPUT
+            echo -e "\nFILE_END: $file\n" >> $OUTPUT
+          done
+
+      - name: Upload Audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.repository.name }}-${{ inputs.target_branch || github.ref_name }}-audit
+          path: full-audit-log.txt
